@@ -201,7 +201,7 @@ class MLP():
 
   def epoch_batch_BP(self, train_x:np.ndarray, train_y:np.ndarray, eta, a=1e-12,l=1e-12):
     """
-    Use all patterns in the given training set to execute an epoch of batch training with (possibly thickonov regularization)
+    Use all patterns in the given training set to execute an epoch of batch training with (possibly) thickonov regularization
     train_x : input in training set
     train_y : output in training set
     eta: learning rate
@@ -217,7 +217,7 @@ class MLP():
     p = sum( map( comp_grad, zip( train_x,train_y ) ) )/N
 
     #compute deltas
-    deltas = eta * p + a * old_deltas - l * self.w
+    deltas = ( eta * p - l * self.w ) + a * old_deltas
 
     # update weights and old_deltas values
     self.w += deltas
