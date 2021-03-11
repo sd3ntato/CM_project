@@ -172,25 +172,37 @@ class MLP():
 
     return np.array(grad)
 
-  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, epsilon, mu, max_epochs=300 ):
+  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, epsilon, mu, tresh=1e-02, max_epochs=300 ):
     """
       trains the network using classical momentum
     """
-    # number of patterns in training set
+    # stuff for statistics computation
+    grad_norms = []
+    errors = []
+    def statistics(gradient_norm, X, Y):
+      grad_norms.append( gradient_norm )
+      e = self.test(X,Y)
+      errors.append( e )
+      print(gradient_norm, e )
+      clear_output(wait=True)
+
+    # number of patterns in training set, epochs of training currently executed
     N = np.size(train_x,axis=0) 
     epoch = 0
 
     # functions for gradient computation
-    compute_partial_gradient = self.compute_gradient_p # function for computing paryial gradient gradient on pattern on pattern p
+    compute_partial_gradient = self.compute_gradient_p # function for computing paryial gradient on pattern on pattern p
     compute_gradient = lambda train_x, train_y: sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N # function for computing gradient of loss function over all patterns
 
     # prevous velocity (v_t) for momentum computation
     old_v = np.array( [ np.zeros(self.w[i].shape) for i in range(self.Nl+1) ] ,dtype=object) 
 
-    # si deve ferma quando gradiente piccolo ma gradiente e' un tensore
-    while( epoch < max_epochs ):
-      # compute gradient ( \Nabla l(w_t) )
-      g = compute_gradient( train_x,train_y )
+    # main loop: compute velocity and update weights
+    gradient_norm = np.inf
+    while( gradient_norm > tresh and epoch < max_epochs ):
+
+      # compute gradient ( \Nabla l(w_t) ) and its "norm"
+      g = compute_gradient( train_x,train_y ); gradient_norm = np.linalg.norm( np.hstack( [ g[i].flatten() for i in range(len(g)) ] ) )
 
       #compute velocity v_{t+1}
       v = mu * old_v - epsilon * g
@@ -199,7 +211,10 @@ class MLP():
       self. w = self.w + v
       old_v = v
 
-      epoch +=1
+      # update epochs counter and collect statistics
+      epoch +=1; statistics(gradient_norm,train_x,train_y)
+    
+    return grad_norms, errors
     
 
   def supply(self, u):
@@ -232,6 +247,6 @@ class MLP():
     return np.array(list( map( lambda u : sup(u) , U ) ))
   
   def test(self, X, Y):
-    outs = self.supply_sequence(X)
-    return self.error(outs, Y)
+    outs = self.supply_sequence(X).flatten()
+    return self.error(outs, Y.flatten())
 

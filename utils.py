@@ -1,3 +1,5 @@
+import numpy as np
+
 def to_categorical(y, num_classes=None, dtype='float32'): # code from keras implementation: keras.utils.to_categorical
   """Converts a class vector (integers) to binary class matrix.
   E.g. for use with categorical_crossentropy.
