@@ -16,8 +16,11 @@ relu = lambda x: x*(x > 0)
 
 # loss functions:
 squared_error = lambda y,d:  np.linalg.norm(y - d) ** 2 # categorical cross-entropy
-cross_entropy = lambda y,d: -np.sum( d * np.log( y + np.finfo(float).eps ) )
-MSE = lambda x,y: np.mean( np.square( x-y ) )
+cross_entropy = lambda y,d: -np.sum( d * np.log( y + np.finfo(float).eps ) ) # controllare, forse segno opposto
+MSE = lambda y,d: np.mean( np.square( y-d ) )
+
+#regularization
+l1 = lambda x: np.array( [ np.max(np.sum(np.abs(w), axis=0)) for w in x ] )
 
 def derivative(f):
   """
@@ -33,6 +36,8 @@ def derivative(f):
     return lambda x : x-x+1
   elif f == squared_error or f == cross_entropy:
     return lambda d,y: y-d 
+  elif f==l1:
+    return lambda x: np.array( [ np.sign(w) for w in x ] )
 
 def get_f(f):
   """
@@ -61,6 +66,10 @@ def get_loss(f):
   elif f=='cross_entropy':
     return cross_entropy
 
+def get_regularization(r):
+  if r=='l1':
+    return l1
+
 def get_error(f):
   """
   error function: string->function
@@ -72,7 +81,7 @@ def get_error(f):
 
 class MLP():
 
-  def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=2, loss='squared_error', error='MSE'):
+  def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=2, loss='squared_error', regularization='l1', error='MSE'):
     """
     Nh: number of hidden units for each layer
     Nu: number of input units
@@ -80,9 +89,10 @@ class MLP():
     f: activation function of hidden units
     f_out: activation function of output units
     w_range: initial range of values for entries in weight matrices
-    w_range: initial number of decimals of values for entries in weight matrices
-    loss: loss functions
-    error: error function
+    w_sclae: initial number of decimals of values for entries in weight matrices
+    loss: loss function: l(y,d) 
+    regularization: type of norm regularization: a penality term is added to loss function O(w)
+    error: error function for assessment of training/validation/test error
     """ 
       
     if loss == 'cross_entropy':
@@ -91,6 +101,7 @@ class MLP():
     f = get_f(f)
     f_out = get_f_out(f_out)
     loss = get_loss(loss)
+    omega = get_regularization(regularization)
     error = get_error(error)
 
     Nl = len(Nh)
@@ -105,6 +116,8 @@ class MLP():
 
     self.l = loss # funzione loss (y-d)**2
     self.dl = derivative(loss) # (y-d)
+    self.o = omega # penality term of loss function given by selected norm of weights
+    self.do = derivative(omega)
     self.error = error
 
     # a[m+1] = f[m]( w[m]*a[m] ) a[m] = (Nh,1) a[m+1] = (Nh,1) w[m] = (Nh,Nh)
@@ -154,7 +167,7 @@ class MLP():
 
   def compute_gradient_p(self,p): 
     """
-    compute gradient over pattern p
+    compute gradient of loss w.r.t activations, over pattern p
     """
     Nl = self.Nl
 
@@ -172,7 +185,7 @@ class MLP():
 
     return np.array(grad)
 
-  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, epsilon, mu, tresh=1e-02, max_epochs=300 ):
+  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, epsilon, mu, alpha, tresh=1e-02, max_epochs=300 ):
     """
       trains the network using classical momentum
     """
@@ -202,7 +215,8 @@ class MLP():
     while( gradient_norm > tresh and epoch < max_epochs ):
 
       # compute gradient ( \Nabla l(w_t) ) and its "norm"
-      g = compute_gradient( train_x,train_y ); gradient_norm = np.linalg.norm( np.hstack( [ g[i].flatten() for i in range(len(g)) ] ) )
+      g = compute_gradient( train_x,train_y ) + alpha * self.do(self.w)
+      gradient_norm = np.linalg.norm( np.hstack( [ g[i].flatten() for i in range(len(g)) ] ) )
 
       #compute velocity v_{t+1}
       v = mu * old_v - epsilon * g
