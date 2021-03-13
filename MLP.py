@@ -1,7 +1,5 @@
-#http://machinelearningmechanic.com/deep_learning/2019/09/04/cross-entropy-loss-derivative.html
-#https://deepnotes.io/softmax-crossentropy
-
 # general imports
+from utils import myflatten
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
@@ -9,24 +7,24 @@ from IPython.display import clear_output
 
 # activation functions
 from numpy import tanh
-from scipy.special import softmax
 ide = lambda x : np.copy(x)
 relu = lambda x: x*(x > 0)
-#softmax = lambda x: np.exp(x - logsumexp(x, keepdims=True)) # implementazione scipy special
+from scipy.special import softmax
 
 # loss functions:
-squared_error = lambda y,d:  np.linalg.norm(y - d) ** 2 # categorical cross-entropy
-cross_entropy = lambda y,d: -np.sum( d * np.log( y + np.finfo(float).eps ) ) # controllare, forse segno opposto
+squared_error = lambda y,d:  np.linalg.norm(y - d) ** 2 
+cross_entropy = lambda y,d: -np.sum( d * np.log( y + np.finfo(float).eps ) ) 
 MSE = lambda y,d: np.mean( np.square( y-d ) )
 
-#regularization
+# norm-regularization (rewritten a naive version of numpy's l1-norm in order to give it an array of matrices of (possibly) different sizes and get back l1 norm of each matrix ) 
 l1 = lambda x: np.array( [ np.max(np.sum(np.abs(w), axis=0)) for w in x ] )
 
 def derivative(f):
   """
   When f is an activation function, returns derivative w.r.t. potential of activation
-  When f is a loss, returns derivative w.r.t. activation
-  When f is cross_entropy and activation of output units is softmax, maths say derivative of loss w.r.t potential is one returned
+  When f is a loss, returns derivative w.r.t. activation of last layer's units
+  When f is norm, returns derivative w.r.t. weigts
+  (When f is cross_entropy and activation of output units is softmax, maths say derivative of loss w.r.t potential is one )
   """
   if f == tanh:
     return lambda x: 1.0 - tanh(x)**2
@@ -83,7 +81,7 @@ class MLP():
 
   def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=2, loss='squared_error', regularization='l1', error='MSE'):
     """
-    Nh: number of hidden units for each layer
+    Nh: number of hidden units for each layer. it is supposed to be an array [Nh_1, Nh_2, ... , Nh_l] s.t. each element Nh_i is the number of hidden units in layer i
     Nu: number of input units
     Ny: number of output units
     f: activation function of hidden units
@@ -105,22 +103,22 @@ class MLP():
     error = get_error(error)
 
     Nl = len(Nh)
-    self.Nl = Nl # numero layer
-    self.Nu = Nu # unita' input
-    self.Ny = Ny # unita' output
-    self.Nh = Nh # unita' interne
+    self.Nl = Nl # number of hidden layers
+    self.Nu = Nu # number of input units
+    self.Ny = Ny # number of output units
+    self.Nh = Nh # array [Nh_1, Nh_2, ... , Nh_l] s.t. each element Nh_i is the number of hidden units in layer i
 
-    self.f = [ ide ] + ( [f] * Nl ) + [ f_out ] #[f_in, f,f,f,f ,f_out] f[m](a[m])
-    self.df = [ derivative(f) for f in self.f] # df[m](v[m])
-    self.w = np.array( [None]*(Nl+1), dtype=object ) # matrici dei pesi 
+    self.f = [ ide ] + ( [f] * Nl ) + [ f_out ] # [f_in, f, f, ..., f, f, f_out] f[m](a[m]) array of activation functions, f[i] is activation function at layer i
+    self.df = [ derivative(f) for f in self.f] # df[m](v[m]) array of derivative of activation functions w.r.t. their input
+    self.w = np.array( [None]*(Nl+1), dtype=object ) # weight matrices, w[i] contains weights of connections between units at layer i and units at layer i+1
 
-    self.l = loss # funzione loss (y-d)**2
-    self.dl = derivative(loss) # (y-d)
+    self.l = loss # loss function,
+    self.dl = derivative(loss) # its derivative w.r.t. activation of last layer's units
     self.o = omega # penality term of loss function given by selected norm of weights
-    self.do = derivative(omega)
-    self.error = error
+    self.do = derivative(omega) # derivative of penality term for regularization
+    self.error = error # error function, to asses test/training/validation error
 
-    # a[m+1] = f[m]( w[m]*a[m] ) a[m] = (Nh,1) a[m+1] = (Nh,1) w[m] = (Nh,Nh)
+    # a[m+1] = f[m]( w[m] @ a[m] ) a[m] = (Nh,1) a[m+1] = (Nh,1) w[m] = (Nh,Nh)
     self.w[0] = np.round( ( 2*np.random.rand( Nh[0], Nu+1 ) -1 )*w_range, w_scale )# pesi input-to-primo-layer, ultima colonna e' bias. w[i,j] in [-1,1]
     for i in range(1, Nl):
       self.w[i] = np.round( ( 2*np.random.rand( Nh[i], Nh[i-1] + 1 )-1 )*w_range, w_scale )# pesi layer-to-layer, ultima colonna e' bias
@@ -132,7 +130,7 @@ class MLP():
     """
     Nl = self.Nl
     v = [None]*(Nl+2) # potenziali attivazione v[m]
-    a = [None]*(Nl+2) # attivazioni a[m] = f[m](v[m])
+    a = [None]*(Nl+2) # activations a[m] = f[m](v[m])
 
     # reshape input if needed
     if not u.shape == (self.Nu,1): 
@@ -142,7 +140,7 @@ class MLP():
     v[0] = u
     a[0] = u # activation of input units is external input
     for m in range(self.Nl+1): 
-      v[m+1] =  np.dot( self.w[m] , np.vstack((a[m],1)) ) # activation of bias units is always 1
+      v[m+1] = self.w[m] @ np.vstack((a[m],1)) # To simulate bias activation, i add to activations a 1 at the bottom
       a[m+1] = self.f[m+1](v[m+1])
     return a,v
 
@@ -158,10 +156,10 @@ class MLP():
     if not y.shape == (self.Ny,1):
       y = y.reshape((self.Ny,1))
 
-    # calculate error-propagation-coefficents for units in each layer
+    # compute error-propagation-coefficents for units in each layer
     d[Nl+1] = self.dl( y , a[Nl+1]) * self.df[Nl+1](v[Nl+1]) # error-propagation-coefficents of output units
     for m in range(Nl,-1,-1):
-      d[m] =  np.dot(  np.delete( self.w[m].T , -1, 0)  , d[m+1]  ) * self.df[m](v[m])  # must get row (column) of bias weights out of the computation of propagation coefficents
+      d[m] = ( np.delete( self.w[m].T, -1, 0) @ d[m+1] ) * self.df[m](v[m])  # must get row (column) of bias weights out of the computation of propagation coefficents
 
     return d
 
@@ -180,14 +178,19 @@ class MLP():
     # compute error-propagation-coefficents
     d = self.backward_pass( y, a, v ) 
 
-    #compute gradient for each layer. To siumlate bias activation, i add to activations a 1 at the bottom
-    grad = [ np.dot( d[m+1] , np.vstack( ( a[m], 1 ) ).T ) for m in range(Nl+1) ]
+    # compute gradient for each layer. To simulate bias activation, i add to activations a 1 at the bottom
+    grad = [ ( d[m+1] @ np.vstack( ( a[m], 1 ) ).T ) for m in range(Nl+1) ]
 
     return np.array(grad)
 
   def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, epsilon, mu, alpha, tresh=1e-02, max_epochs=300 ):
     """
       trains the network using classical momentum
+      epsilon: learning-rate, fixed at the moment
+      mu: acceleration coefficent 
+      alpha: regularization coefficent
+      tresh: treshold to exit main loop of training
+      max_epochs: maximum number of epochs to be done
     """
     # stuff for statistics computation
     grad_norms = []
@@ -207,16 +210,17 @@ class MLP():
     compute_partial_gradient = self.compute_gradient_p # function for computing paryial gradient on pattern on pattern p
     compute_gradient = lambda train_x, train_y: sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N # function for computing gradient of loss function over all patterns
 
-    # prevous velocity (v_t) for momentum computation
+    # prevous velocity (v_t) for momentum computation. (placeholder)
     old_v = np.array( [ np.zeros(self.w[i].shape) for i in range(self.Nl+1) ] ,dtype=object) 
 
     # main loop: compute velocity and update weights
-    gradient_norm = np.inf
-    while( gradient_norm > tresh and epoch < max_epochs ):
+    gradient_norm = np.inf # placeholder for gradient norm
+    init_gradient_norm = np.linalg.norm( myflatten( compute_gradient( train_x,train_y ) + alpha * self.do(self.w) ) ) # initial norm of the gradient, to be used for stoppin criterion
+    while( ( gradient_norm / init_gradient_norm ) > tresh and epoch < max_epochs ):
 
-      # compute gradient ( \Nabla l(w_t) ) and its "norm"
+      # compute gradient ( \Nabla loss(w_t) ) and its norm
       g = compute_gradient( train_x,train_y ) + alpha * self.do(self.w)
-      gradient_norm = np.linalg.norm( np.hstack( [ g[i].flatten() for i in range(len(g)) ] ) )
+      gradient_norm = np.linalg.norm( myflatten(g) ) # generally gradient is a tensor/matrix. To compute its norm i flatten it in order to make it become a vector
 
       #compute velocity v_{t+1}
       v = mu * old_v - epsilon * g
@@ -226,7 +230,7 @@ class MLP():
       old_v = v
 
       # update epochs counter and collect statistics
-      epoch +=1; statistics(gradient_norm,train_x,train_y)
+      epoch +=1; statistics(gradient_norm / init_gradient_norm,train_x,train_y)
     
     return grad_norms, errors
     
@@ -246,7 +250,7 @@ class MLP():
     # calculate activation of units in each layer
     a[0] = u
     for m in range(self.Nl+1):
-      a[m+1] = self.f[m+1]( np.dot( self.w[m] , np.vstack((a[m],1)) ) )
+      a[m+1] = self.f[m+1](  self.w[m] @ np.vstack(( a[m], 1)) )
     return np.copy(a[self.Nl+1])
 
   def supply_sequence(self,U):

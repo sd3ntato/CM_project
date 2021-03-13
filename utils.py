@@ -26,3 +26,5 @@ def to_categorical(y, num_classes=None, dtype='float32'): # code from keras impl
   output_shape = input_shape + (num_classes,)
   categorical = np.reshape(categorical, output_shape)
   return categorical
+
+myflatten = lambda g: np.hstack( [ g[i].flatten() for i in range(len(g)) ] )

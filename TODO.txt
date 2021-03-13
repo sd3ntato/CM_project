@@ -1,5 +1,7 @@
-- riguardare le slide sulla regolarizzazione del micheli e ricordare come funziona
-- capire e implementare regolarizzazione l1
+- selezionare step-size con armijo-wolfe
 - inviare bozza a frangioni e poloni, devo chiedere riguardo alla convessita supposta da bundle method
 - allenamento si deve fermare quando il gradiente e' piccolo.[v]
 - capire come funziona il mio momento, se e' nesterov o classico, comunque se giusto o meno. [v]
+- riguardare le slide sulla regolarizzazione del micheli e ricordare come funziona [v]
+- capire e implementare regolarizzazione l1 [v]
+- stop con grad/init_grad<eps [v]
