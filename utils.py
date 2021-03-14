@@ -28,3 +28,48 @@ def to_categorical(y, num_classes=None, dtype='float32'): # code from keras impl
   return categorical
 
 myflatten = lambda g: np.hstack( [ g[i].flatten() for i in range(len(g)) ] )
+
+def armijo_wolfe(n, alpha, d, train_x, train_y, epsilon, m1, m2, tau):
+
+  def phi(alpha):
+    """
+      phi(alpha) = f( x + alpha * d ) = loss( n_{w+alpha*d} )
+    """
+    # copy the current weights of the netwrork
+    w = np.copy(n.w)
+
+    # use a network with temporarily updated weights
+    n.w += alpha * d
+
+    # compute loss of the modified network, a.k.a phi(alpha)
+    outs = n.supply_sequence(train_x).reshape(train_y.shape)
+    phi_alpha = n.l(outs, train_y) + np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
+
+    # compute derivative/gradient of loss of the modified net
+    g = n.compute_gradient( train_x, train_y ) + epsilon * n.do(n.w) 
+
+    # compute actual value of derivative of phi(alpha)
+    phi_prime_alpha = np.dot( myflatten(g), myflatten(d) )
+
+    # reset weights
+    n.w = w
+
+    return phi_alpha, phi_prime_alpha
+
+  phi_zero, phi_prime_zero = phi(0)
+  phi_alpha, phi_prime_alpha = phi(alpha)
+
+  def check_armijo(phi_alpha):
+    return phi_alpha <= phi_zero + m1 * alpha * phi_prime_zero
+  
+  def check_wolfe(phi_prime_alpha):
+    return abs(phi_prime_alpha) <= - m2 * phi_prime_zero
+  
+  n_iter=0
+  while not (check_armijo(phi_alpha) and check_wolfe(phi_prime_alpha) ) and n_iter<300:
+    alpha *= tau # decrease tau
+    phi_alpha, phi_prime_alpha = phi(alpha)
+    n_iter+=1
+  
+  print( 'alpha found at itration ',n_iter,' , ',alpha)
+  return alpha

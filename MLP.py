@@ -1,5 +1,5 @@
 # general imports
-from utils import myflatten
+from utils import myflatten, armijo_wolfe
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
@@ -32,7 +32,7 @@ def derivative(f):
     return lambda x: 1*(x>=0)
   elif f == ide or f == softmax:
     return lambda x : x-x+1
-  elif f == squared_error or f == cross_entropy:
+  elif f == squared_error or f==MSE or f == cross_entropy:
     return lambda d,y: y-d 
   elif f==l1:
     return lambda x: np.array( [ np.sign(w) for w in x ] )
@@ -61,6 +61,8 @@ def get_loss(f):
   """ 
   if f=='squared_error':
     return squared_error
+  elif f=='MSE':
+    return MSE
   elif f=='cross_entropy':
     return cross_entropy
 
@@ -183,12 +185,17 @@ class MLP():
 
     return np.array(grad)
 
-  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, epsilon, mu, alpha, tresh=1e-02, max_epochs=300 ):
+  def compute_gradient(self, train_x, train_y):
+    N = np.size(train_x,axis=0) 
+    compute_partial_gradient = self.compute_gradient_p # function for computing paryial gradient on pattern on pattern p
+    return sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N # function for computing gradient of loss function over all patterns
+
+
+  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, mu, epsilon, tresh=1e-02, max_epochs=300 ):
     """
       trains the network using classical momentum
-      epsilon: learning-rate, fixed at the moment
       mu: acceleration coefficent 
-      alpha: regularization coefficent
+      epsilon: regularization coefficent
       tresh: treshold to exit main loop of training
       max_epochs: maximum number of epochs to be done
     """
@@ -203,30 +210,34 @@ class MLP():
       clear_output(wait=True)
 
     # number of patterns in training set, epochs of training currently executed
-    N = np.size(train_x,axis=0) 
     epoch = 0
 
     # functions for gradient computation
-    compute_partial_gradient = self.compute_gradient_p # function for computing paryial gradient on pattern on pattern p
-    compute_gradient = lambda train_x, train_y: sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N # function for computing gradient of loss function over all patterns
+    compute_gradient = self.compute_gradient
 
     # prevous velocity (v_t) for momentum computation. (placeholder)
     old_v = np.array( [ np.zeros(self.w[i].shape) for i in range(self.Nl+1) ] ,dtype=object) 
 
     # main loop: compute velocity and update weights
     gradient_norm = np.inf # placeholder for gradient norm
-    init_gradient_norm = np.linalg.norm( myflatten( compute_gradient( train_x,train_y ) + alpha * self.do(self.w) ) ) # initial norm of the gradient, to be used for stoppin criterion
+    init_gradient_norm = np.linalg.norm( myflatten( compute_gradient( train_x,train_y ) + epsilon * self.do(self.w) ) ) # initial norm of the gradient, to be used for stoppin criterion
     while( ( gradient_norm / init_gradient_norm ) > tresh and epoch < max_epochs ):
 
       # compute gradient ( \Nabla loss(w_t) ) and its norm
-      g = compute_gradient( train_x,train_y ) + alpha * self.do(self.w)
+      g = compute_gradient( train_x,train_y ) + epsilon * self.do(self.w)
       gradient_norm = np.linalg.norm( myflatten(g) ) # generally gradient is a tensor/matrix. To compute its norm i flatten it in order to make it become a vector
 
+      # compute direction ( d_i = - \Nalbla f (x^i) / || \Nalbla f (x^i)  || )
+      d = - g / gradient_norm
+
+      # compute step-size using Armijo-Wolfe
+      alpha = armijo_wolfe(self, 1, d, train_x, train_y, epsilon, 0.01, 0.9, 0.9)
+
       #compute velocity v_{t+1}
-      v = mu * old_v - epsilon * g
+      v = mu * old_v + alpha * d
 
       # update weights and prevoius velocity
-      self. w = self.w + v
+      self.w = self.w + v
       old_v = v
 
       # update epochs counter and collect statistics
