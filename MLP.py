@@ -231,7 +231,7 @@ class MLP():
       d = - g / gradient_norm
 
       # compute step-size using Armijo-Wolfe
-      alpha = armijo_wolfe(self, 1, d, train_x, train_y, epsilon, 0.01, 0.9, 0.9)
+      alpha = armijo_wolfe(self, 1, d, train_x, train_y, epsilon, 0.01, 0.9, 0.7)
 
       #compute velocity v_{t+1}
       v = mu * old_v + alpha * d
