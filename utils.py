@@ -1,4 +1,5 @@
 import numpy as np
+import cvxpy as cp
 
 def to_categorical(y, num_classes=None, dtype='float32'): # code from keras implementation: keras.utils.to_categorical
   """Converts a class vector (integers) to binary class matrix.
@@ -69,3 +70,55 @@ def armijo_wolfe(n, alpha, d, train_x, train_y, epsilon, m1, m2, tau):
   
   print( 'alpha found at itration ',n_iter,' , ',alpha)
   return alpha
+
+def proximal_bundle_method(n, mu, epsilon, m1, reg_param, train_x, train_y):
+  from numpy.linalg import norm
+  N = n.numero_parametri # numero parametri 
+
+  def f(x): 
+    """
+    this computes loss and its derivative/gradient given weights
+    """
+
+    # copy the current weights of the netwrork
+    w = np.copy(n.w)
+
+    # use a network with temporarily updated weights
+    n.w = x # questo x arriva piatto e va rimesso in forma di tensore
+
+    # compute loss of the modified network, a.k.a phi(alpha)
+    outs = n.supply_sequence(train_x).reshape(train_y.shape)
+    f_x = n.l(outs, train_y) + np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
+
+    # compute derivative/gradient of loss of the modified net
+    g_x = n.compute_gradient( train_x, train_y ) + reg_param * n.do(n.w) 
+
+    # reset weights
+    n.w = w
+
+    return f_x, g_x
+
+  x_bar = np.copy(n.w)
+  f_x_bar, g_x_bar = f(x_bar)
+  bundle = [ ( x_bar, f_x_bar, g_x_bar ) ]
+
+  def solve_quadratic():
+    v = cp.Variable(1,1)
+    x = cp.Variable(N,1)
+    objective = cp.Minimize( v + mu * norm( x - x_bar )**2  )
+    constraints = [ v >= f_i + g_i.T @ ( x - x_i ) for f_i, g_i, x_i in bundle  ]
+    prob = cp.Problem(objective, constraints)
+    _ = prob.solve()
+    return x.value, v.value
+
+  while(True):
+    x_star, f_bundle_x_star = solve_quadratic()
+    if mu * norm(x_star-x_bar) <= epsilon:
+      break
+    
+    f_x_star, g_x_star = f(x_star)
+    if f_x_star <= f_x_bar + m1*( f_bundle_x_star - f_x_bar ):
+      x_bar = x_star
+      f_x_bar, g_x_bar = f(x_bar)
+      
+    bundle.append( x_star, f_x_star, g_x_star )

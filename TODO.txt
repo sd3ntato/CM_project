@@ -1,8 +1,12 @@
 - non regolarizzare bias
-- inviare bozza a frangioni e poloni, devo chiedere riguardo alla convessita supposta da bundle method
+- installare sto cvxpy
+- line-search e' backtracking, posso/ha senso usare entrambe le condizioni AW in backtracking?
+- chiedere a frangioni riguardo alla convessita supposta da bundle method
 - allenamento si deve fermare quando il gradiente e' piccolo.[v]
 - capire come funziona il mio momento, se e' nesterov o classico, comunque se giusto o meno. [v]
 - riguardare le slide sulla regolarizzazione del micheli e ricordare come funziona [v]
 - capire e implementare regolarizzazione l1 [v]
 - stop con grad/init_grad<eps [v]
 - selezionare step-size con armijo-wolfe [v]
+- inviare bozza a frangioni e poloni [v]
+- abbozzare PBM [v]
