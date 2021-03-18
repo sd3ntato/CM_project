@@ -28,7 +28,25 @@ def to_categorical(y, num_classes=None, dtype='float32'): # code from keras impl
   categorical = np.reshape(categorical, output_shape)
   return categorical
 
-myflatten = lambda g: np.hstack( [ g[i].flatten() for i in range(len(g)) ] )
+def myflatten(g):
+  return np.hstack( [ g[i].flatten() for i in range(len(g)) ] )
+
+def deflatten(n,x):
+  """
+    given weight in flat form, returns weights in "tensor" form
+  """
+  w = np.array( [None]*(n.Nl+1), dtype=object )
+
+  w[0] = x[ : n.Nh[0] * (n.Nu+1) ].reshape( n.Nh[0], n.Nu+1 )
+  x = x[n.Nh[0]*(n.Nu+1):]
+  for i in range(1, n.Nl):
+      w[i] = x[ : n.Nh[i] * (n.Nh[i-1] + 1) ].reshape( n.Nh[i], n.Nh[i-1] + 1)
+      x = x[n.Nh[i] * (n.Nh[i-1] + 1):]
+  w[n.Nl] = x.reshape(n.Ny, n.Nh[n.Nl-1] + 1)
+
+  # print( myflatten(n.w) - myflatten( deflatten( n, myflatten( n.w ) ) ) )
+
+  return w
 
 def phi(alpha, n, d, train_x, train_y, epsilon):
   """
@@ -84,9 +102,9 @@ def proximal_bundle_method(n, mu, epsilon, m1, reg_param, train_x, train_y):
     w = np.copy(n.w)
 
     # use a network with temporarily updated weights
-    n.w = x # questo x arriva piatto e va rimesso in forma di tensore
+    n.w = deflatten(n,x) # questo x arriva piatto e va rimesso in forma di tensore
 
-    # compute loss of the modified network, a.k.a phi(alpha)
+    # compute loss of the modified network
     outs = n.supply_sequence(train_x).reshape(train_y.shape)
     f_x = n.l(outs, train_y) + np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
 
