@@ -1,5 +1,5 @@
 - non regolarizzare bias
-- installare sto cvxpy
+- my flatten gli faccio dare vettori colonna, vedi se si rompe l'altro allenamento con momento
 - line-search e' backtracking, posso/ha senso usare entrambe le condizioni AW in backtracking?
 - chiedere a frangioni riguardo alla convessita supposta da bundle method
 - allenamento si deve fermare quando il gradiente e' piccolo.[v]
@@ -10,3 +10,4 @@
 - selezionare step-size con armijo-wolfe [v]
 - inviare bozza a frangioni e poloni [v]
 - abbozzare PBM [v]
+- installare sto cvxpy [v]

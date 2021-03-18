@@ -1,5 +1,6 @@
 import numpy as np
 import cvxpy as cp
+from IPython.display import clear_output
 
 def to_categorical(y, num_classes=None, dtype='float32'): # code from keras implementation: keras.utils.to_categorical
   """Converts a class vector (integers) to binary class matrix.
@@ -29,7 +30,7 @@ def to_categorical(y, num_classes=None, dtype='float32'): # code from keras impl
   return categorical
 
 def myflatten(g):
-  return np.hstack( [ g[i].flatten() for i in range(len(g)) ] )
+  return np.hstack( [ g[i].flatten() for i in range(len(g)) ] ).reshape(-1,1)
 
 def deflatten(n,x):
   """
@@ -66,7 +67,7 @@ def phi(alpha, n, d, train_x, train_y, epsilon):
   g = n.compute_gradient( train_x, train_y ) + epsilon * n.do(n.w) 
 
   # compute actual value of derivative of phi(alpha)
-  phi_prime_alpha = np.dot( myflatten(g), myflatten(d) )
+  phi_prime_alpha =  myflatten(g).T @ myflatten(d) 
 
   # reset weights
   n.w = w
@@ -89,9 +90,8 @@ def armijo_wolfe(n, alpha, d, train_x, train_y, epsilon, m1, m2, tau):
   print( 'alpha found at itration ',n_iter,' , ',alpha)
   return alpha
 
-def proximal_bundle_method(n, mu, epsilon, m1, reg_param, train_x, train_y):
+def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, epsilon=1e-03, mu=.1, max_epochs=100):
   from numpy.linalg import norm
-  N = n.numero_parametri # numero parametri 
 
   def f(x): 
     """
@@ -106,37 +106,86 @@ def proximal_bundle_method(n, mu, epsilon, m1, reg_param, train_x, train_y):
 
     # compute loss of the modified network
     outs = n.supply_sequence(train_x).reshape(train_y.shape)
-    f_x = n.l(outs, train_y) + np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
+    f_x = n.l(outs, train_y) # + reg_param * np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
 
     # compute derivative/gradient of loss of the modified net
-    g_x = n.compute_gradient( train_x, train_y ) + reg_param * n.do(n.w) 
+    g_x = myflatten( n.compute_gradient( train_x, train_y ) + reg_param * n.do(n.w) )
 
     # reset weights
     n.w = w
 
     return f_x, g_x
 
-  x_bar = np.copy(n.w)
+  # function and data structure for statistics computation
+  grad_norms = []
+  errors = []
+  def statistics(gradient_norm, X, Y):
+    grad_norms.append( gradient_norm )
+    e = n.test(X,Y)
+    errors.append( e )
+    print(gradient_norm, e, mu )
+    clear_output(wait=True)
+
+  # initial point
+  x_bar = myflatten( np.copy(n.w) )
+  N = len(x_bar) # numero parametri 
+
+  # value of function and its gradient on initial point
   f_x_bar, g_x_bar = f(x_bar)
+
+  # initialize bundle
   bundle = [ ( x_bar, f_x_bar, g_x_bar ) ]
 
-  def solve_quadratic():
-    v = cp.Variable(1,1)
-    x = cp.Variable(N,1)
-    objective = cp.Minimize( v + mu * norm( x - x_bar )**2  )
-    constraints = [ v >= f_i + g_i.T @ ( x - x_i ) for f_i, g_i, x_i in bundle  ]
-    prob = cp.Problem(objective, constraints)
-    _ = prob.solve()
+  # function for solving master problem
+  def solve_quadratic(x_bar,bundle):
+    v = cp.Variable((1,1))
+    x = cp.Variable((N,1))
+    objective = cp.Minimize( v + mu * 0.5 * cp.atoms.norm( (x-x_bar).flatten() )**2  )
+    constraints = [ v >= f_i + g_i.T @ ( x - x_i ) for x_i, f_i, g_i in bundle  ]
+    problem = cp.Problem(objective, constraints)
+    try:
+      problem.solve()
+    except:
+      print('solver failed')
+      return None, None
+    print(problem.status)
     return x.value, v.value
 
+  # main loop
+  n_epoch = 0
   while(True):
-    x_star, f_bundle_x_star = solve_quadratic()
-    if mu * norm(x_star-x_bar) <= epsilon:
+    # compute current x_star, optimal value of the bundle function
+    x_star, f_bundle_x_star = solve_quadratic(x_bar,bundle)
+
+    #if not isinstance(x_star,np.ndarray):
+    if x_star is None:
+      print('unable to solve master problem')
+      return x_star, grad_norms, errors
+
+    # if i get a solution close to the one i had, i can quit 
+    if mu * np.linalg.norm(x_star-x_bar) <= epsilon or n_epoch > max_epochs:
+      print( mu * np.linalg.norm(x_star-x_bar) )
       break
     
+    # Null step/Serious step decision: i compute f on current x_star and see if it is better than my current x_bar
     f_x_star, g_x_star = f(x_star)
-    if f_x_star <= f_x_bar + m1*( f_bundle_x_star - f_x_bar ):
+    if f_x_star <= f_x_bar + m1 * ( f_bundle_x_star - f_x_bar ):
+      # if step is serious i change my current x_bar and recompute function value and its gradient
       x_bar = x_star
       f_x_bar, g_x_bar = f(x_bar)
-      
-    bundle.append( x_star, f_x_star, g_x_star )
+
+      mu = mu * 0.9
+
+      n.w = deflatten(n,x_bar)
+
+      print('SS')
+      statistics(np.linalg.norm(g_x_bar), train_x, train_y)
+    else:
+      print('NS')
+      statistics(np.linalg.norm(g_x_bar), train_x, train_y)
+      mu = mu * 1.1
+
+    bundle.append( (x_star, f_x_star, g_x_star) )
+    n_epoch += 1
+  
+  return deflatten(n,x_bar), grad_norms, errors
