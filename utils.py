@@ -89,7 +89,7 @@ def armijo_wolfe(n, alpha, d, train_x, train_y, epsilon, m1, m2, tau):
   print( 'alpha found at itration ',n_iter,' , ',alpha)
   return alpha
 
-def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, epsilon=1e-03, mu=.1, max_epochs=100):
+def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, epsilon=1e-03, mu=.1, max_epochs=100):
   from numpy.linalg import norm
 
   def f(x): 

@@ -12,8 +12,14 @@
 - installare sto cvxpy [v]
 - my flatten gli faccio dare vettori colonna, vedi se si rompe l'altro allenamento con momento[v]
 - guarda, qui il calcolo della funzione loss non va bene, quindi mo riguarda quella io stacco ciao[v]
+- esperimento regressione multi-dimensionale, o direttamente prova su test di ML [v]
 
 
 IDEE ESPERIMENTI:
 - bundle method da solo credo si incastri su poor local minima certe volte per via della non-convessita
 - forse partendo con pesi piu piccoli bundle method va meglio (meno poor local minima)
+
+
+PENSIERI DUBBI PERPLESSITA':
+- comunque il bundle method non funziona se uso come loss squared_error (senza mean), penso che sia per via della forte non convessita' della funzione quando usi una loss che assume valori cosi alti...
+- allora io direi che mo potemo comincia a scrive un po' de relazione e pensa a che fa come esperimenti, nel frattempo scrivi quelle due comande al frangioni e noi se beccamo domani 
