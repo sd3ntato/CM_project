@@ -12,7 +12,7 @@ relu = lambda x: x*(x > 0)
 from scipy.special import softmax
 
 # loss functions:
-squared_error = lambda y,d:  np.linalg.norm(y - d) ** 2 
+squared_error = lambda y,d:  np.linalg.norm( (y - d).flatten() ) ** 2 
 cross_entropy = lambda y,d: -np.sum( d * np.log( y + np.finfo(float).eps ) ) 
 MSE = lambda y,d: np.mean( np.square( y-d ) )
 
@@ -81,7 +81,7 @@ def get_error(f):
 
 class MLP():
 
-  def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=2, loss='squared_error', regularization='l1', error='MSE'):
+  def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=2, loss='MSE', regularization='l1', error='MSE'):
     """
     Nh: number of hidden units for each layer. it is supposed to be an array [Nh_1, Nh_2, ... , Nh_l] s.t. each element Nh_i is the number of hidden units in layer i
     Nu: number of input units
@@ -204,7 +204,7 @@ class MLP():
     errors = []
     def statistics(gradient_norm, X, Y):
       grad_norms.append( gradient_norm )
-      e = self.test(X,Y)
+      e = self.test_loss(X,Y)
       errors.append( e )
       print(gradient_norm, e )
       clear_output(wait=True)
@@ -275,7 +275,11 @@ class MLP():
     sup = self.supply
     return np.array(list( map( lambda u : sup(u) , U ) ))
   
-  def test(self, X, Y):
-    outs = self.supply_sequence(X).flatten()
-    return self.error(outs, Y.flatten())
+  def test_error(self, X, Y):
+    outs = self.supply_sequence(X)
+    return self.error(outs, Y.reshape(outs.shape))
+  
+  def test_loss(self, X, Y):
+    outs = self.supply_sequence(X)
+    return self.l(outs, Y.reshape(outs.shape))
 

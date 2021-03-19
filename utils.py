@@ -60,8 +60,7 @@ def phi(alpha, n, d, train_x, train_y, epsilon):
   n.w += alpha * d
 
   # compute loss of the modified network, a.k.a phi(alpha)
-  outs = n.supply_sequence(train_x).reshape(train_y.shape)
-  phi_alpha = n.l(outs, train_y) + np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
+  phi_alpha = n.test_loss(train_x,train_y) + epsilon * np.linalg.norm( myflatten(n.w).reshape(-1), ord=1 )
 
   # compute derivative/gradient of loss of the modified net
   g = n.compute_gradient( train_x, train_y ) + epsilon * n.do(n.w) 
@@ -105,8 +104,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, eps
     n.w = deflatten(n,x) # questo x arriva piatto e va rimesso in forma di tensore
 
     # compute loss of the modified network
-    outs = n.supply_sequence(train_x).reshape(train_y.shape)
-    f_x = n.l(outs, train_y) # + reg_param * np.linalg.norm(myflatten(n.w), ord=1)# f of x plus alpha d
+    f_x = n.test_loss(train_x,train_y) + reg_param * np.linalg.norm( myflatten(n.w).reshape(-1), ord=1 )
 
     # compute derivative/gradient of loss of the modified net
     g_x = myflatten( n.compute_gradient( train_x, train_y ) + reg_param * n.do(n.w) )
@@ -121,7 +119,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, eps
   errors = []
   def statistics(gradient_norm, X, Y):
     grad_norms.append( gradient_norm )
-    e = n.test(X,Y)
+    e = n.test_loss(X,Y)
     errors.append( e )
     print(gradient_norm, e, mu )
     clear_output(wait=True)
@@ -137,7 +135,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, eps
   bundle = [ ( x_bar, f_x_bar, g_x_bar ) ]
 
   # function for solving master problem
-  def solve_quadratic(x_bar,bundle):
+  def solve_master(x_bar,bundle):
     v = cp.Variable((1,1))
     x = cp.Variable((N,1))
     objective = cp.Minimize( v + mu * 0.5 * cp.atoms.norm( (x-x_bar).flatten() )**2  )
@@ -155,7 +153,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, eps
   n_epoch = 0
   while(True):
     # compute current x_star, optimal value of the bundle function
-    x_star, f_bundle_x_star = solve_quadratic(x_bar,bundle)
+    x_star, f_bundle_x_star = solve_master(x_bar,bundle)
 
     #if not isinstance(x_star,np.ndarray):
     if x_star is None:
@@ -174,7 +172,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, eps
       x_bar = x_star
       f_x_bar, g_x_bar = f(x_bar)
 
-      mu = mu * 0.9
+      mu = mu * 0.7
 
       n.w = deflatten(n,x_bar)
 
@@ -183,7 +181,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 1e-02, eps
     else:
       print('NS')
       statistics(np.linalg.norm(g_x_bar), train_x, train_y)
-      mu = mu * 1.1
+      mu = mu * 1.3
 
     bundle.append( (x_star, f_x_star, g_x_star) )
     n_epoch += 1
