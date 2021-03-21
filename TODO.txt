@@ -1,7 +1,8 @@
 - non regolarizzare bias
+- qui bisogna capi come cazzo funziona sta cazzo de regolarizzazione, quando calcolo la norma i pesi li devo tene in forma matriciale o li mette a vettore?!
 - line-search e' backtracking, posso/ha senso usare entrambe le condizioni AW in backtracking?
 - chiedere a frangioni riguardo alla convessita supposta da bundle method
-- allenamento si deve fermare quando il gradiente e' piccolo.[v]
+- allenamento si deve fermare quando il gradiente e' piccolo. [v]
 - capire come funziona il mio momento, se e' nesterov o classico, comunque se giusto o meno. [v]
 - riguardare le slide sulla regolarizzazione del micheli e ricordare come funziona [v]
 - capire e implementare regolarizzazione l1 [v]
@@ -10,8 +11,8 @@
 - inviare bozza a frangioni e poloni [v]
 - abbozzare PBM [v]
 - installare sto cvxpy [v]
-- my flatten gli faccio dare vettori colonna, vedi se si rompe l'altro allenamento con momento[v]
-- guarda, qui il calcolo della funzione loss non va bene, quindi mo riguarda quella io stacco ciao[v]
+- my flatten gli faccio dare vettori colonna, vedi se si rompe l'altro allenamento con momento [v]
+- guarda, qui il calcolo della funzione loss non va bene, quindi mo riguarda quella io stacco ciao [v]
 - esperimento regressione multi-dimensionale, o direttamente prova su test di ML [v]
 
 

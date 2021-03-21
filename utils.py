@@ -60,10 +60,10 @@ def phi(alpha, n, d, train_x, train_y, epsilon):
   n.w += alpha * d
 
   # compute loss of the modified network, a.k.a phi(alpha)
-  phi_alpha = n.test_loss(train_x,train_y) + epsilon * np.linalg.norm( myflatten(n.w).reshape(-1), ord=1 )
+  phi_alpha = n.test_loss(train_x,train_y, epsilon) 
 
   # compute derivative/gradient of loss of the modified net
-  g = n.compute_gradient( train_x, train_y ) + epsilon * n.do(n.w) 
+  g = n.compute_gradient( train_x, train_y, epsilon )
 
   # compute actual value of derivative of phi(alpha)
   phi_prime_alpha =  myflatten(g).T @ myflatten(d) 
@@ -104,22 +104,22 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
     n.w = deflatten(n,x) # questo x arriva piatto e va rimesso in forma di tensore
 
     # compute loss of the modified network
-    f_x = n.test_loss(train_x,train_y) + reg_param * np.linalg.norm( myflatten(n.w).reshape(-1), ord=1 )
+    f_x = n.test_loss(train_x,train_y, epsilon)
 
     # compute derivative/gradient of loss of the modified net
-    g_x = myflatten( n.compute_gradient( train_x, train_y ) + reg_param * n.do(n.w) )
+    g_x = myflatten( n.compute_gradient( train_x, train_y, reg_param ) )
 
     # reset weights
     n.w = w
 
     return f_x, g_x
 
-  # function and data structure for statistics computation
+  # function and data structures for statistics computation
   grad_norms = []
   errors = []
-  def statistics(gradient_norm, X, Y):
+  def statistics(gradient_norm):
     grad_norms.append( gradient_norm )
-    e = n.test_loss(X,Y)
+    e = n.test_loss(train_x,train_y,epsilon)
     errors.append( e )
     print(gradient_norm, e, mu )
     clear_output(wait=True)
@@ -177,10 +177,10 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
       n.w = deflatten(n,x_bar)
 
       print('SS')
-      statistics(np.linalg.norm(g_x_bar), train_x, train_y)
+      statistics(np.linalg.norm(g_x_bar))
     else:
       print('NS')
-      statistics(np.linalg.norm(g_x_bar), train_x, train_y)
+      statistics(np.linalg.norm(g_x_bar))
       mu = mu * 1.3
 
     bundle.append( (x_star, f_x_star, g_x_star) )

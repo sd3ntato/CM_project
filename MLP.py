@@ -17,7 +17,8 @@ cross_entropy = lambda y,d: -np.sum( d * np.log( y + np.finfo(float).eps ) )
 MSE = lambda y,d: np.mean( np.square( y-d ) )
 
 # norm-regularization (rewritten a naive version of numpy's l1-norm in order to give it an array of matrices of (possibly) different sizes and get back l1 norm of each matrix ) 
-l1 = lambda x: np.array( [ np.max(np.sum(np.abs(w), axis=0)) for w in x ] )
+#l1 = lambda x: np.array( [ np.max(np.sum(np.abs(w), axis=0)) for w in x ] )
+l1 = lambda x: np.linalg.norm( myflatten(x).reshape(-1), ord=1)
 
 def derivative(f):
   """
@@ -185,13 +186,13 @@ class MLP():
 
     return np.array(grad)
 
-  def compute_gradient(self, train_x, train_y):
+  def compute_gradient(self, train_x, train_y, epsilon):
     N = np.size(train_x,axis=0) 
     compute_partial_gradient = self.compute_gradient_p # function for computing paryial gradient on pattern on pattern p
-    return sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N # function for computing gradient of loss function over all patterns
+    return sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N + epsilon * self.do(self.w)  # function for computing gradient of loss function over all patterns
 
 
-  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, mu, epsilon, tresh=1e-02, max_epochs=300 ):
+  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, mu, epsilon=0, tresh=1e-01, max_epochs=300 ):
     """
       trains the network using classical momentum
       mu: acceleration coefficent 
@@ -204,7 +205,7 @@ class MLP():
     errors = []
     def statistics(gradient_norm, X, Y):
       grad_norms.append( gradient_norm )
-      e = self.test_loss(X,Y)
+      e = self.test_loss(X,Y,epsilon)
       errors.append( e )
       print(gradient_norm, e )
       clear_output(wait=True)
@@ -220,11 +221,11 @@ class MLP():
 
     # main loop: compute velocity and update weights
     gradient_norm = np.inf # placeholder for gradient norm
-    init_gradient_norm = np.linalg.norm( myflatten( compute_gradient( train_x,train_y ) + epsilon * self.do(self.w) ) ) # initial norm of the gradient, to be used for stoppin criterion
+    init_gradient_norm = np.linalg.norm( myflatten( compute_gradient( train_x,train_y, epsilon ) ) ) # initial norm of the gradient, to be used for stoppin criterion
     while( ( gradient_norm / init_gradient_norm ) > tresh and epoch < max_epochs ):
 
       # compute gradient ( \Nabla loss(w_t) ) and its norm
-      g = compute_gradient( train_x,train_y ) + epsilon * self.do(self.w)
+      g = compute_gradient( train_x, train_y, epsilon )
       gradient_norm = np.linalg.norm( myflatten(g) ) # generally gradient is a tensor/matrix. To compute its norm i flatten it in order to make it become a vector
 
       # compute direction ( d_i = - \Nalbla f (x^i) / || \Nalbla f (x^i)  || )
@@ -279,7 +280,7 @@ class MLP():
     outs = self.supply_sequence(X)
     return self.error(outs, Y.reshape(outs.shape))
   
-  def test_loss(self, X, Y):
+  def test_loss(self, X, Y, epsilon):
     outs = self.supply_sequence(X)
-    return self.l(outs, Y.reshape(outs.shape))
+    return self.l(outs, Y.reshape(outs.shape)) + epsilon * self.o(self.w)
 
