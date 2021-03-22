@@ -51,7 +51,7 @@ def deflatten(n,x):
 
 def phi(alpha, n, d, train_x, train_y, epsilon):
   """
-    phi(alpha) = f( x + alpha * d ) = loss( n_{w+alpha*d} )
+    phi(alpha) = f( x + alpha * d ) = loss( w + alpha*d )
   """
   # copy the current weights of the netwrork
   w = np.copy(n.w)
@@ -62,28 +62,39 @@ def phi(alpha, n, d, train_x, train_y, epsilon):
   # compute loss of the modified network, a.k.a phi(alpha)
   phi_alpha = n.test_loss(train_x,train_y, epsilon) 
 
-  # compute derivative/gradient of loss of the modified net
-  g = n.compute_gradient( train_x, train_y, epsilon )
-
-  # compute actual value of derivative of phi(alpha)
-  phi_prime_alpha =  myflatten(g).T @ myflatten(d) 
-
   # reset weights
   n.w = w
 
-  return phi_alpha, phi_prime_alpha
+  return phi_alpha
+
+"""
+  if derivative:
+    # compute derivative/gradient of loss of the modified net
+    g = n.compute_gradient( train_x, train_y, epsilon )
+
+    # compute actual value of derivative of phi(alpha)
+    phi_prime_alpha =  myflatten(g).T @ myflatten(d) 
+  else:
+    # no derivative to compute 
+    phi_prime_alpha = None
+"""
 
 def armijo_wolfe(n, alpha, d, train_x, train_y, epsilon, m1, m2, tau):
   """
-   In realta' questa e' una versione becera del backtracking, se voglio tenerla cosi dovrei tenere solo la condizione armijo col maggiore stretto
+   
   """
-  phi_zero, phi_prime_zero = phi(0, n, d, train_x, train_y, epsilon)
-  phi_alpha, phi_prime_alpha = phi(alpha, n, d, train_x, train_y, epsilon)
+  # phi_zero, phi_prime_zero = phi(0, n, d, train_x, train_y, epsilon)
+  # print('ciao, ', phi_prime_zero - (- np.linalg.norm( myflatten( n.compute_gradient( train_x, train_y, epsilon ) ) ) ) )
+  
+  phi_zero = phi(0, n, d, train_x, train_y, epsilon)
+  phi_prime_zero = - np.linalg.norm( myflatten( n.compute_gradient( train_x, train_y, epsilon ) ) )
+
+  phi_alpha = phi(alpha, n, d, train_x, train_y, epsilon)
 
   n_iter=0
-  while not ( phi_alpha <= phi_zero + m1 * alpha * phi_prime_zero and abs(phi_prime_alpha) <= - m2 * phi_prime_zero ) and n_iter<10:
+  while not ( phi_alpha < phi_zero + m1 * alpha * phi_prime_zero ) and n_iter<10:
     alpha *= tau # decrease tau
-    phi_alpha, phi_prime_alpha = phi(alpha, n, d, train_x, train_y, epsilon)
+    phi_alpha = phi(alpha, n, d, train_x, train_y, epsilon)
     n_iter+=1
   
   print( 'alpha found at itration ',n_iter,' , ',alpha)
