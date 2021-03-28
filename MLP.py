@@ -82,7 +82,7 @@ def get_error(f):
 
 class MLP():
 
-  def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=2, loss='MSE', regularization='l1', error='MSE'):
+  def __init__(self, Nh=[10], Nu=1, Ny=1, f='tanh', f_out='ide' , w_range=.7, w_scale=4, loss='MSE', regularization='l1', error='MSE'):
     """
     Nh: number of hidden units for each layer. it is supposed to be an array [Nh_1, Nh_2, ... , Nh_l] s.t. each element Nh_i is the number of hidden units in layer i
     Nu: number of input units
@@ -192,10 +192,11 @@ class MLP():
     return sum( map( compute_partial_gradient, zip( train_x,train_y ) ) )/N + epsilon * self.do(self.w)  # function for computing gradient of loss function over all patterns
 
 
-  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, mu, epsilon=0, tresh=1e-01, max_epochs=300 ):
+  def momentum_train(self, train_x:np.ndarray, train_y:np.ndarray, alpha=1e-01, beta=5e-02, epsilon=0, tresh=1e-02, max_epochs=300,reset=True ):
     """
       trains the network using classical momentum
-      mu: acceleration coefficent 
+      alpha: learning rate
+      beta: acceleration coefficent 
       epsilon: regularization coefficent
       tresh: treshold to exit main loop of training
       max_epochs: maximum number of epochs to be done
@@ -217,29 +218,27 @@ class MLP():
     compute_gradient = self.compute_gradient
 
     # prevous velocity (v_t) for momentum computation. (placeholder)
-    old_v = np.array( [ np.zeros(self.w[i].shape) for i in range(self.Nl+1) ] ,dtype=object) 
+    old_d = np.array( [ np.zeros(self.w[i].shape) for i in range(self.Nl+1) ] ,dtype=object) 
 
     # main loop: compute velocity and update weights
     gradient_norm = np.inf # placeholder for gradient norm
     init_gradient_norm = np.linalg.norm( myflatten( compute_gradient( train_x,train_y, epsilon ) ) ) # initial norm of the gradient, to be used for stoppin criterion
     while( ( gradient_norm / init_gradient_norm ) > tresh and epoch < max_epochs ):
 
+      if reset and epoch % 50 == 0:
+        print('reset')
+        old_d = np.array( [ np.zeros(self.w[i].shape) for i in range(self.Nl+1) ] ,dtype=object) 
+
       # compute gradient ( \Nabla loss(w_t) ) and its norm
       g = compute_gradient( train_x, train_y, epsilon )
       gradient_norm = np.linalg.norm( myflatten(g) ) # generally gradient is a tensor/matrix. To compute its norm i flatten it in order to make it become a vector
 
-      # compute direction ( d_i = - \Nalbla f (x^i) / || \Nalbla f (x^i)  || )
-      d = - g / gradient_norm
-
-      # compute step-size using Armijo-Wolfe
-      alpha = armijo_wolfe(self, 1, d, train_x, train_y, epsilon, 0.01, 0.9, 0.7)
-
-      #compute velocity v_{t+1}
-      v = mu * old_v + alpha * d
+      #compute velocity d
+      d = -alpha*g + beta*old_d
 
       # update weights and prevoius velocity
-      self.w = self.w + v
-      old_v = v
+      self.w = self.w + d
+      old_d = d
 
       # update epochs counter and collect statistics
       epoch +=1; statistics(gradient_norm / init_gradient_norm,train_x,train_y)
