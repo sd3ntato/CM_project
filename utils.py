@@ -179,6 +179,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
     # Null step/Serious step decision: i compute f on current x_star and see if it is better than my current x_bar
     f_x_star, g_x_star = f(x_star)
     if f_x_star <= f_x_bar + m1 * ( f_bundle_x_star - f_x_bar ):
+#      assert ( f_bundle_x_star - f_x_bar ) < 0, f'{f_x_star} <= {f_x_bar} + {m1} * ( {f_bundle_x_star} - {f_x_bar} )' 
       # if step is serious i change my current x_bar and recompute function value and its gradient
       x_bar = x_star
       f_x_bar, g_x_bar = f(x_bar)
