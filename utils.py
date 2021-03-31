@@ -31,7 +31,7 @@ def to_categorical(y, num_classes=None, dtype='float32'): # code from keras impl
 
 def myflatten(g):
   """
-    flattens object type tensor into column vector
+    flattens object type tensor into column vector.
   """
   return np.hstack( [ g[i].flatten() for i in range(len(g)) ] ).reshape(-1,1)
 
