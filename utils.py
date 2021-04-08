@@ -52,6 +52,11 @@ def deflatten(n,x):
 
   return w
 
+def set_zeros(ws):
+  for w in ws:
+    w[np.abs(w) < 1e-5] = 0
+  return ws
+
 def phi(alpha, n, d, train_x, train_y, epsilon):
   """
     phi(alpha) = f( x + alpha * d ) = loss( w + alpha*d )
@@ -189,7 +194,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
 
       mu = mu * 0.7
 
-      n.w = deflatten(n,x_bar)
+      n.w = deflatten(n,x_bar); n.w = set_zeros(n.w)
 
       print('SS')
       statistics(np.linalg.norm(g_x_bar))

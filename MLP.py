@@ -1,5 +1,5 @@
 # general imports
-from utils import myflatten, armijo_wolfe
+from utils import myflatten, set_zeros
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
@@ -237,7 +237,8 @@ class MLP():
       d = -alpha*g + beta*old_d
 
       # update weights and prevoius velocity
-      self.w = self.w + d
+      self.w = self.w + d; self.w = set_zeros(self.w)
+
       old_d = d
 
       # update epochs counter and collect statistics

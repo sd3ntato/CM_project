@@ -1,6 +1,6 @@
-- mettere citazioni rel
-- non regolarizzare bias
-- chiedere a frangioni riguardo alla convessita supposta da bundle method
+- mettere citazioni rel [v]
+- non regolarizzare bias [x]
+- chiedere a frangioni riguardo alla convessita supposta da bundle method [v]
 - allenamento si deve fermare quando il gradiente e' piccolo. [v]
 - capire come funziona il mio momento, se e' nesterov o classico, comunque se giusto o meno. [v]
 - riguardare le slide sulla regolarizzazione del micheli e ricordare come funziona [v]
@@ -24,3 +24,8 @@ IDEE ESPERIMENTI:
 PENSIERI DUBBI PERPLESSITA':
 - comunque il bundle method non funziona se uso come loss squared_error (senza mean), penso che sia per via della forte non convessita' della funzione quando usi una loss che assume valori cosi alti... [v] avevo solo sbagliato sqared err
 - allora io direi che mo potemo comincia a scrive un po' de relazione e pensa a che fa come esperimenti, nel frattempo scrivi quelle due comande al frangioni e noi se beccamo domani [v]
+
+COSA RIPASSARE:
+- Ottimizzazione funzioni quadratiche con constraint
+- Ripasso CG con Poloni (annessi e connessi)
+- condition number of curvature at the minimum
