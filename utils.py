@@ -54,7 +54,7 @@ def deflatten(n,x):
 
 def set_zeros(ws):
   for w in ws:
-    w[np.abs(w) < 1e-5] = 0
+    w[np.abs(w) < 1e-9] = 0
   return ws
 
 def phi(alpha, n, d, train_x, train_y, epsilon):
