@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
 from IPython.display import clear_output
+import time
 
 # activation functions
 from numpy import tanh
@@ -202,14 +203,19 @@ class MLP():
       max_epochs: maximum number of epochs to be done
     """
     # stuff for statistics computation
+    init_time = time.perf_counter()
     grad_norms = []
     errors = []
-    def statistics(gradient_norm, X, Y):
+    times = []
+    def statistics(gradient_norm):
+      now = time.perf_counter()
+      times.append( now - init_time )
       grad_norms.append( gradient_norm )
-      e = self.test_loss(X,Y,epsilon)
+      e = self.test_loss(train_x,train_y,epsilon)
       errors.append( e )
       print(gradient_norm, e )
       clear_output(wait=True)
+    statistics(0)
 
     # number of patterns in training set, epochs of training currently executed
     epoch = 0
@@ -242,9 +248,9 @@ class MLP():
       old_d = d
 
       # update epochs counter and collect statistics
-      epoch +=1; statistics(gradient_norm / init_gradient_norm,train_x,train_y)
+      epoch +=1; statistics(gradient_norm / init_gradient_norm)
     
-    return grad_norms, errors
+    return grad_norms, errors, times
     
 
   def supply(self, u):

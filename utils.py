@@ -1,5 +1,6 @@
 import numpy as np
 import cvxpy as cp
+import time
 from IPython.display import clear_output
 
 def to_categorical(y, num_classes=None, dtype='float32'): # code from keras implementation: keras.utils.to_categorical
@@ -134,14 +135,19 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
     return f_x, g_x
 
   # function and data structures for statistics computation
+  init_time = time.perf_counter()
   grad_norms = []
   errors = []
+  times = []
   def statistics(gradient_norm):
+    now = time.perf_counter()
+    times.append( now - init_time )
     grad_norms.append( gradient_norm )
     e = n.test_loss(train_x,train_y,epsilon)
     errors.append( e )
     print(gradient_norm, e, mu )
     clear_output(wait=True)
+  statistics(0)
 
   # initial point
   x_bar = myflatten( np.copy(n.w) )
@@ -206,4 +212,4 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
     bundle.append( (x_star, f_x_star, g_x_star) )
     n_epoch += 1
   
-  return deflatten(n,x_bar), grad_norms, errors
+  return grad_norms, errors, times
