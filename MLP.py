@@ -250,7 +250,7 @@ class MLP():
       # update epochs counter and collect statistics
       epoch +=1; statistics(gradient_norm / init_gradient_norm)
     
-    return grad_norms, errors, times
+    return grad_norms, errors, times, epoch
     
 
   def supply(self, u):

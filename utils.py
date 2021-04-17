@@ -203,13 +203,12 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
       n.w = deflatten(n,x_bar); n.w = set_zeros(n.w)
 
       print('SS')
-      statistics(np.linalg.norm(g_x_bar))
     else:
       print('NS')
-      statistics(np.linalg.norm(g_x_bar))
       mu = mu * 1.3
 
+    statistics(np.linalg.norm(g_x_bar))
     bundle.append( (x_star, f_x_star, g_x_star) )
     n_epoch += 1
   
-  return grad_norms, errors, times
+  return grad_norms, errors, times, n_epoch
