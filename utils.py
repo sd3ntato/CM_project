@@ -183,7 +183,7 @@ def proximal_bundle_method(n, train_x, train_y, reg_param=1e-04, m1 = 5e-02, eps
     #if not isinstance(x_star,np.ndarray):
     if x_star is None:
       print('unable to solve master problem')
-      return x_star, grad_norms, errors
+      return x_star, grad_norms, errors, n_epoch
 
     # if i get a solution close to the one i had, i can quit 
     if mu * np.linalg.norm(x_star-x_bar) <= epsilon or n_epoch > max_epochs:
